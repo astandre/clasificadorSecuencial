@@ -1,80 +1,86 @@
-# Load the Pandas libraries with alias 'pd'
 import pandas as pd
-import numpy as np
 import time
-import statistics
+from sklearn.cluster import KMeans
+import numpy as np
 
-# Read data from file 'filename.csv'
-# (in the same directory that your python process is based)
-# Control delimiters, rows, column names with read_csv (see later)
-# Get starting time
 start_time = time.time()
 
-data_temp = pd.read_csv("temperature.csv")
-data_hum = pd.read_csv("humidity.csv")
-data_pres = pd.read_csv("pressure.csv")
+# Reading data from csv
+data_temp = pd.read_csv("temperature.csv", sep=";", header=None)
+data_hum = pd.read_csv("humidity.csv", sep=";", header=None)
+data_pres = pd.read_csv("pressure.csv", sep=";", header=None)
+
+# Tsnforming to data to dataframe
+df_temp = pd.DataFrame(data_temp)
+df_hum = pd.DataFrame(data_hum)
+df_pres = pd.DataFrame(data_pres)
+
+# print(df_temp)
+
+df_temp = df_temp.dropna()
+df_hum = df_hum.dropna()
+df_pres = df_pres.dropna()
+
+# print(df_temp)
+
+df_temp.to_csv("temperature_df.csv", sep=',', header=None, index=False)
+df_hum.to_csv("humidity_df.csv", sep=',', header=None, index=False)
+df_pres.to_csv("pressure_df.csv", sep=',', header=None, index=False)
+
 print("Stage[DATA EXTRACTION]: %s seconds." % (time.time() - start_time))
-# Preview the first 5 lines of the loaded data
-data_temp.head()
+# TODO read file
+# TODO crear lista
+
+data_temp = pd.read_csv("temperature_df.csv", sep=",")
+data_hum = pd.read_csv("humidity_df.csv", sep=",")
+data_pres = pd.read_csv("pressure_df.csv", sep=",")
 
 df_temp = pd.DataFrame(data_temp)
 df_hum = pd.DataFrame(data_hum)
 df_pres = pd.DataFrame(data_pres)
-df_classification = pd.DataFrame(columns=['Time', 'City', 'Temperature', 'Humidity', 'Pressure', 'Class'])
+
+# Resizing data set
+df_temp = df_temp.drop(df_temp.columns[35], axis=1)
+df_hum = df_hum.drop(df_hum.columns[35], axis=1)
+
+values_temp = df_temp.values
+values_hum = df_hum.values
+values_pres = df_pres.values
+
+list_temp = list(values_temp)
+list_hum = list(values_hum)
+list_pres = list(values_pres)
+
+# Size of data set
+#
+# print("Data set size (%d, %d)" % (len(list_temp), len(list_temp[0])))
+# print("Data set size (%d, %d)" % (len(list_hum), len(list_hum[0])))
+# print("Data set size (%d, %d)" % (len(list_pres), len(list_pres[0])))
+
+# Resizing data set
+
+list_temp = list_temp[0:36262]
+list_pres = list_pres[0:36262]
+
+# print("Data set size (%d, %d)" % (len(list_temp), len(list_temp[0])))
+# print("Data set size (%d, %d)" % (len(list_hum), len(list_hum[0])))
+# print("Data set size (%d, %d)" % (len(list_pres), len(list_pres[0])))
+
+training_list = np.array([list_temp, list_hum, list_pres], dtype=np.float)
+
+# Preparing training data set
 
 print("Stage[DATA TRANSFORMATION]: %s seconds." % (time.time() - start_time))
+# print("Data set size (%d, %d)" % (len(training_list), len(training_list[0])))
 
-headers = list(df_temp)
-del headers[0]
-print(headers)
-# print(df_temp)
-# Size of dataframes
-# print(df_temp.shape)
-# print(df_hum.shape)
-# print(df_pres.shape)
-print("Stage[DATA CLASSIFICATION START]: %s seconds." % (time.time() - start_time))
-for col in headers:
-    print("CLASSIFYING " + df_temp[col])
-    print("Temperature")
-    mean_temp = df_temp.loc[:, col].mean()
-    min_temp = df_temp.loc[:, col].min()
-    max_temp = df_temp.loc[:, col].max()
-    print("Mean temp ", mean_temp)
-    print("Min temp ", min_temp)
-    print("Max temp ", max_temp)
+kmeans = KMeans(n_clusters=3, random_state=0).fit(list_temp)
+# print(kmeans.labels_)
+# Getting the cluster centers
+C = kmeans.cluster_centers_
+# print(C)
+print("Stage[DATA ENTRENAMIENTO ]: %s seconds." % (time.time() - start_time))
 
-    print("Humidity")
-    mean_hum = df_hum.loc[:, col].mean()
-    min_hum = df_hum.loc[:, col].min()
-    max_hum = df_hum.loc[:, col].max()
-    print("Mean temp ", mean_hum)
-    print("Min temp ", min_hum)
-    print("Max temp ", max_hum)
+testing_data = np.random.rand(2, 35)
+kmeans.predict(testing_data)
 
-    print("Pressure")
-    mean_pres = df_pres.loc[:, col].mean()
-    min_pres = df_pres.loc[:, col].min()
-    max_pres = df_pres.loc[:, col].max()
-    print("Mean temp ", mean_pres)
-    print("Min temp ", min_pres)
-    print("Max temp ", max_pres)
-
-    # for index in range(0, df_temp.shape[0]):
-    for index in range(0, 10):
-        current_temp = df_temp[col][index]
-        current_hum = df_hum[col][index]
-        current_pressure = df_pres[col][index]
-        new_row = {'Time': df_temp['datetime'][index], 'City': col, 'Temperature': df_temp[col][index],
-                   'Humidity': df_hum[col][index],
-                   'Pressure': df_pres[col][index]}
-        print(new_row)
-        if current_temp >= mean_temp and current_hum <= mean_hum:
-            new_row['Class'] = "Soleado"
-        elif current_hum > mean_hum and current_temp <= mean_temp:
-            new_row['Class'] = "Lluvioso"
-        #     Adding new classified object
-        df_classification = df_classification.append(new_row, ignore_index=True)
-    print("\nStage[CLASSIFICATION] (%s): %s seconds." % (col, time.time() - start_time))
-print(df_classification)
-# Print execution time
-print("Stage[DATA CLASSIFICATION END]: %s seconds." % (time.time() - start_time))
+print("Stage[DATA TESTING ]: %s seconds." % (time.time() - start_time))
